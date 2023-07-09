@@ -13,5 +13,4 @@ Match #, Date, Team Names (Team A Vs Team C), City.
 
    {For example Team A has to play with Team C, twice, but once in the city which Team A represents and once in the city which Team C represents.
     A team cannot play matches on two consecutive days. <3. Every day only one match can be played, except on week ends (Saturday and Sunday) two games can be played.}
-
-Inspired by this [repo](https://github.com/sonuchaudhary7/ipl-scheduling-using-round-robin-algo).
+Adapted and made changes to this [repo](https://github.com/sonuchaudhary7/ipl-scheduling-using-round-robin-algo).
