@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IPL Schedule</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <style>
+    .container {
+      margin-top: 50px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>IPL Fixture</h1>
+    <hr>
+
+    <div id="row">
+      <div class="col-md-4">
+        <div class="form-horizontal">
+          <div class="form-group">
+            <label class="control-label col-sm-6" for="tournamentStartDate">Tournament start date:</label>
+            <div class="col-sm-6">
+              <input type="date" class="form-control" id="tournamentStartDate">
+            </div>
+          </div>
+          <div class="form-group"> 
+            <div class="col-sm-offset-6 col-sm-6">
+              <button id="getScheduleBtn" class="btn btn-default">Get Schedule</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="clearfix"></div>
+
+    <div class="row">
+      <div class="col-sm-10">
+        <h4>Teams & their home grounds</h4>
+        <hr>
+        <table id="teamsTable" class="table table-striped table-bordered">
+          <thead>
+            <tr>
+              <th>Team</th>
+              <th>Home Ground</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Teams and home grounds will be dynamically added here -->
+          </tbody>
+        </table>
+        <h4>IPL Schedule</h4>
+        <hr>
+        <table id="scheduleTable" class="table table-striped table-bordered">
+          <thead>
+            <tr>
+              <th>Match #</th>
+              <th>Date</th>
+              <th>Team Names</th>
+              <th>City</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Schedule rows will be dynamically added here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var teams = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+    var stadiums = {
+      'A': 'Home Ground Team A',
+      'B': 'Home Ground Team B',
+      'C': 'Home Ground Team C',
+      'D': 'Home Ground Team D',
+      'E': 'Home Ground Team E',
+      'F': 'Home Ground Team F',
+      'G': 'Home Ground Team G',
+      'H': 'Home Ground Team H'
+    };
+
+    function createTeamsTable() {
+      var tableBody = document.getElementById('teamsTable').getElementsByTagName('tbody')[0];
+      tableBody.innerHTML = '';
+
+      for (var i = 0; i < teams.length; i++) {
+        var row = document.createElement('tr');
+        var teamCell = document.createElement('td');
+        var homeGroundCell = document.createElement('td');
+
+        teamCell.textContent = (i + 1) + '. Team ' + teams[i];
+        homeGroundCell.textContent = stadiums[teams[i]];
+
+        row.appendChild(teamCell);
+        row.appendChild(homeGroundCell);
+
+        tableBody.appendChild(row);
+      }
+    }
+
+    function addLeadingZeroes(number, length) {
+      var str = String(number);
+      while (str.length < length) {
+        str = '0' + str;
+      }
+      return str;
+    }
+
+    function setSchedule(schedule, startingDate) {
+      var tableBody = document.getElementById('scheduleTable').getElementsByTagName('tbody')[0];
+      tableBody.innerHTML = '';
+
+      var date = new Date(startingDate);
+      var weekendCount = 0;
+
+      for (var i = 0; i < schedule.length; i++) {
+        if (date.getDay() >= 6) {
+          date.setDate(date.getDate() + 1);
+          weekendCount++;
+        }
+
+        if (weekendCount === 2) {
+          date.setDate(date.getDate() + 1);
+          weekendCount = 0;
+        }
+
+        var row = document.createElement('tr');
+        var matchNumber = document.createElement('td');
+        var matchDate = document.createElement('td');
+        var teamNames = document.createElement('td');
+        var city = document.createElement('td');
+
+        matchNumber.textContent = (i + 1) + '.';
+        matchDate.textContent = date.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+        teamNames.textContent = 'Team ' + schedule[i].home_team + ' v/s Team ' + schedule[i].away_team;
+        city.textContent = schedule[i].stadium;
+
+        row.appendChild(matchNumber);
+        row.appendChild(matchDate);
+        row.appendChild(teamNames);
+        row.appendChild(city);
+
+        tableBody.appendChild(row);
+
+        date.setDate(date.getDate() + 1);
+      }
+    }
+
+    document.getElementById('getScheduleBtn').addEventListener('click', function(event) {
+      event.preventDefault();
+
+      var startingDateInput = document.getElementById('tournamentStartDate');
+      var startingDate = startingDateInput.value;
+
+      var roundrobin = new IplFixtureGenerator(teams);
+      var matches = roundrobin.createMatches();
+
+      if (roundrobin.finished) {
+        var round = roundrobin.matches;
+        var matches_home = [];
+        var matches_away = [];
+
+        for (var i = 0; i < round.length; i++) {
+          for (var j = 0; j < round[i].length; j++) {
+            matches_home.push({
+              home_team: round[i][j][0],
+              away_team: round[i][j][1],
+              stadium: stadiums[round[i][j][0]]
+            });
+            matches_away.push({
+              home_team: round[i][j][1],
+              away_team: round[i][j][0],
+              stadium: stadiums[round[i][j][1]]
+            });
+          }
+        }
+
+        var schedule = matches_home.concat(matches_away);
+        setSchedule(schedule, startingDate);
+      }
+    });
+
+    function IplFixtureGenerator(passedTeams) {
+      this.teams = passedTeams;
+      this.finished = false;
+      this.error = '';
+      this.matchdaysCreated = false;
+      this.rawMatchesCreated = false;
+      this.freeTicket = true;
+      this.freeTicketIdentifer = 'Freeeeeeeeee';
+      this.matchdayCount = 0;
+      this.matchdayPointer = 0;
+      this.matchPointer = 0;
+      this.matches = [];
+    }
+
+    IplFixtureGenerator.prototype.createMatches = function() {
+      if (!this.validTeamArray()) {
+        return false;
+      }
+
+      this.matches = [];
+
+      if (this.teams.length % 2) {
+        this.teams1 = this.teams.slice(0, Math.ceil(this.teams.length / 2));
+        this.teams2 = this.teams.slice(Math.ceil(this.teams.length / 2));
+      } else {
+        this.teams1 = this.teams.slice(0, this.teams.length / 2);
+        this.teams2 = this.teams.slice(this.teams.length / 2);
+      }
+
+      if (!this.matchdayCount) {
+        for (var i = 2; i < this.teams1.length * 2; i++) {
+          this.saveMatchday();
+          this.rotate();
+        }
+        this.saveMatchday();
+      } else {
+        if (this.matchdayCount < 0) {
+          this.error = 'No negative matchDay count allowed';
+          this.resetClassState();
+          return true;
+        }
+        this.shuffleTeams();
+        if (this.teams.length >= this.matchdayCount) {
+          for (var i = 1; i < this.matchdayCount; i++) {
+            this.saveMatchday();
+            this.rotate();
+          }
+          this.saveMatchday();
+        } else {
+          for (var i = 2; i < this.teams1.length * 2; i++) {
+            this.saveMatchday();
+            this.rotate();
+          }
+          this.saveMatchday();
+          var diff = this.matchdayCount - this.teams.length;
+          for (var i = 0; i < diff; i++) {
+            this.matches.push([]);
+          }
+        }
+      }
+
+      this.finished = true;
+      this.rawMatchesCreated = false;
+      this.matchdaysCreated = true;
+      this.clearPointer();
+
+      return this.matches;
+    };
+
+    IplFixtureGenerator.prototype.saveMatchday = function() {
+      var matches_tmp = [];
+      for (var i = 0; i < this.teams1.length; i++) {
+        if (
+          this.freeTicket ||
+          (this.teams1[i] != this.freeTicketIdentifer &&
+            this.teams2[i] != this.freeTicketIdentifer)
+        )
+          matches_tmp.push([this.teams1[i], this.teams2[i]]);
+      }
+      this.matches.push(matches_tmp);
+      return true;
+    };
+
+    IplFixtureGenerator.prototype.rotate = function() {
+      var temp = this.teams1[1];
+      for (var i = 1; i < this.teams1.length - 1; i++) {
+        this.teams1[i] = this.teams1[i + 1];
+      }
+      this.teams1[this.teams1.length - 1] = this.teams2[this.teams2.length - 1];
+      for (var i = this.teams2.length - 1; i > 0; i--) {
+        this.teams2[i] = this.teams2[i - 1];
+      }
+      this.teams2[0] = temp;
+      return true;
+    };
+
+    IplFixtureGenerator.prototype.validTeamArray = function() {
+      if (!Array.isArray(this.teams) || this.teams.length < 2) {
+        this.error = 'Not enough teams in array => shape passed';
+        this.resetClassState();
+        return false;
+      }
+      return true;
+    };
+
+    IplFixtureGenerator.prototype.resetClassState = function() {
+      this.finished = false;
+      this.rawMatchesCreated = false;
+      this.matchdaysCreated = false;
+      this.matches = [];
+      this.clearPointer();
+      this.matchdayCount = 0;
+      return true;
+    };
+
+    IplFixtureGenerator.prototype.clearPointer = function() {
+      this.matchdayPointer = 0;
+      this.matchPointer = 0;
+      return true;
+    };
+
+    IplFixtureGenerator.prototype.shuffleTeams = function() {
+      for (var i = this.teams1.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp1 = this.teams1[i];
+        var temp2 = this.teams2[i];
+        this.teams1[i] = this.teams1[j];
+        this.teams2[i] = this.teams2[j];
+        this.teams1[j] = temp1;
+        this.teams2[j] = temp2;
+      }
+    };
+  </script>
+</body>
+</html>
