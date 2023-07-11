@@ -1,4 +1,5 @@
-The live version of this repo is [here](https://iplschedulesample.netlify.app/)
+The live version of this repo is [here](https://iplschedulesample.netlify.app/).
+
 IPL Schedule Generator in Javascript.
 
 IPL (Indian Premier League) is a popular cricket tournament.
